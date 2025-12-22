@@ -3,7 +3,38 @@
 <head>
   <title>Hunger Games RP</title>
 </head>
+
 <body>
-  <h1>Hello RP World!</h1>
+  <h1>Hunger Games RP</h1>
+
+  <div id="output">Loading...</div>
+
+  <!-- SUPABASE CODE GOES HERE -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabaseUrl = 'PASTE_YOUR_SUPABASE_URL_HERE';
+    const supabaseKey = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function loadHubs() {
+      const { data, error } = await supabase
+        .from('hubs')
+        .select('*');
+
+      const output = document.getElementById('output');
+
+      if (error) {
+        output.textContent = 'Error loading hubs';
+        console.error(error);
+        return;
+      }
+
+      output.innerHTML = data.map(hub => `<p>${hub.name}</p>`).join('');
+    }
+
+    loadHubs();
+  </script>
 </body>
 </html>
