@@ -1,40 +1,161 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hunger Games RP</title>
+
+  <meta charset="UTF-8">
+  <title>HG RP Site Prototype</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0e0e0e;
+      color: #eee;
+      padding: 20px;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 4px 0;
+      cursor: pointer;
+    }
+
+    .box {
+      border: 1px solid #444;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .nav button {
+      margin-right: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>Hunger Games RP</h1>
 
-  <div id="output">Loading...</div>
+<h1>Hunger Games RP Prototype</h1>
 
-  <!-- SUPABASE CODE GOES HERE -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+<div class="nav">
+  <button onclick="showPage('user')">User Page</button>
+  <button onclick="showPage('admin')">Admin Panel</button>
+</div>
 
-    const supabaseUrl = 'https://nshyyzvtmhyeluvewczk.supabase.co';
-    const supabaseKey = 'sb_publishable_d6_k7muWNpm7QgL1xeMdfg_emtXDi1b';
+<!-- USER PAGE -->
+<div id="userPage" class="box">
+  <h2>User Profile</h2>
+  <p>Username: <span id="u_name"></span></p>
+  <p>Age: <span id="u_age"></span></p>
+  <p>Level: <span id="u_level"></span></p>
+  <p>District: <span id="u_district"></span></p>
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  <button onclick="gainXP()">Interact (Gain Level)</button>
 
-    async function loadHubs() {
-      const { data, error } = await supabase
-        .from('hubs')
-        .select('*');
+  <h3>Hubs</h3>
+  <button onclick="enterDistrict()">District RP</button>
+  <button onclick="enterCapitol()">Capitol RP</button>
 
-      const output = document.getElementById('output');
+  <p id="hubMessage"></p>
+</div>
 
-      if (error) {
-        output.textContent = 'Error loading hubs';
-        console.error(error);
-        return;
-      }
+<!-- ADMIN PAGE -->
+<div id="adminPage" class="box hidden">
+  <h2>Admin Panel</h2>
 
-      output.innerHTML = data.map(hub => `<p>${hub.name}</p>`).join('');
+  <h3>User Controls</h3>
+  <button onclick="adminLevelUp()">+1 Level</button>
+  <button onclick="adminAgeUp()">+1 Age</button>
+
+  <h3>District</h3>
+  <button onclick="setDistrict(1)">District 1</button>
+  <button onclick="setDistrict(4)">District 4</button>
+  <button onclick="setDistrict(7)">District 7</button>
+
+  <h3>Overrides</h3>
+  <button onclick="unlockCapitol()">Force Capitol Access</button>
+
+  <p><em>(In future: visible only to admins)</em></p>
+</div>
+
+<script>
+  // USER STATE
+  let user = {
+    username: "Tribute01",
+    age: 11,
+    level: 1,
+    district: 7,
+    forceCapitol: false
+  };
+
+  function showPage(page) {
+    document.getElementById("userPage").classList.add("hidden");
+    document.getElementById("adminPage").classList.add("hidden");
+
+    if (page === "user") {
+      document.getElementById("userPage").classList.remove("hidden");
+    } else {
+      document.getElementById("adminPage").classList.remove("hidden");
+    }
+  }
+
+  function render() {
+    document.getElementById("u_name").textContent = user.username;
+    document.getElementById("u_age").textContent = user.age;
+    document.getElementById("u_level").textContent = user.level;
+    document.getElementById("u_district").textContent = user.district;
+  }
+
+  function gainXP() {
+    user.level++;
+
+    if (user.level % 2 === 0) {
+      user.age++;
     }
 
-    loadHubs();
-  </script>
+    render();
+  }
+
+  function enterDistrict() {
+    document.getElementById("hubMessage").textContent =
+      "You are roleplaying in District " + user.district + ".";
+  }
+
+  function enterCapitol() {
+    if (user.level >= 3 || user.forceCapitol) {
+      document.getElementById("hubMessage").textContent =
+        "Welcome to the Capitol. Eyes are everywhere.";
+    } else {
+      document.getElementById("hubMessage").textContent =
+        "Capitol locked. Reach Level 3.";
+    }
+  }
+
+  // ADMIN FUNCTIONS
+  function adminLevelUp() {
+    user.level++;
+    render();
+  }
+
+  function adminAgeUp() {
+    user.age++;
+    render();
+  }
+
+  function setDistrict(num) {
+    user.district = num;
+    render();
+  }
+
+  function unlockCapitol() {
+    user.forceCapitol = true;
+    alert("Capitol access force-enabled.");
+  }
+
+  render();
+</script>
+
 </body>
 </html>
