@@ -1,160 +1,189 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
   <meta charset="UTF-8">
-  <title>HG RP Site Prototype</title>
-
+  <title>HG RP Site</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #0e0e0e;
+      background: #0f0f0f;
       color: #eee;
+      font-family: Arial, sans-serif;
       padding: 20px;
     }
-
-    button {
-      padding: 8px 12px;
-      margin: 4px 0;
-      cursor: pointer;
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
     }
-
+    .hidden { display: none; }
     .box {
       border: 1px solid #444;
       padding: 15px;
       margin-bottom: 20px;
-    }
-
-    .nav button {
-      margin-right: 10px;
-    }
-
-    .hidden {
-      display: none;
     }
   </style>
 </head>
 
 <body>
 
-<h1>Hunger Games RP Prototype</h1>
+<h1>Hunger Games RP</h1>
 
-<div class="nav">
-  <button onclick="showPage('user')">User Page</button>
-  <button onclick="showPage('admin')">Admin Panel</button>
+<!-- AUTH -->
+<div id="auth" class="box">
+  <h2>Login / Signup</h2>
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+  <input id="username" placeholder="Username (signup only)"><br>
+
+  <button onclick="signUp()">Sign Up</button>
+  <button onclick="signIn()">Login</button>
+  <p id="authMsg"></p>
 </div>
 
-<!-- USER PAGE -->
-<div id="userPage" class="box">
-  <h2>User Profile</h2>
-  <p>Username: <span id="u_name"></span></p>
-  <p>Age: <span id="u_age"></span></p>
-  <p>Level: <span id="u_level"></span></p>
-  <p>District: <span id="u_district"></span></p>
+<!-- PROFILE -->
+<div id="profile" class="box hidden">
+  <h2>Your Profile</h2>
+  <p>Username: <span id="p_username"></span></p>
+  <p>Age: <span id="p_age"></span></p>
+  <p>Level: <span id="p_level"></span></p>
+  <p>District: <span id="p_district"></span></p>
+  <p>Role: <span id="p_role"></span></p>
 
-  <button onclick="gainXP()">Interact (Gain Level)</button>
-
-  <h3>Hubs</h3>
-  <button onclick="enterDistrict()">District RP</button>
-  <button onclick="enterCapitol()">Capitol RP</button>
-
-  <p id="hubMessage"></p>
+  <button onclick="logout()">Logout</button>
 </div>
 
-<!-- ADMIN PAGE -->
-<div id="adminPage" class="box hidden">
+<!-- ADMIN -->
+<div id="admin" class="box hidden">
   <h2>Admin Panel</h2>
-
-  <h3>User Controls</h3>
   <button onclick="adminLevelUp()">+1 Level</button>
   <button onclick="adminAgeUp()">+1 Age</button>
-
-  <h3>District</h3>
-  <button onclick="setDistrict(1)">District 1</button>
-  <button onclick="setDistrict(4)">District 4</button>
-  <button onclick="setDistrict(7)">District 7</button>
-
-  <h3>Overrides</h3>
-  <button onclick="unlockCapitol()">Force Capitol Access</button>
-
-  <p><em>(In future: visible only to admins)</em></p>
 </div>
 
-<script>
-  // USER STATE
-  let user = {
-    username: "Tribute01",
-    age: 11,
-    level: 1,
-    district: 7,
-    forceCapitol: false
-  };
+<!-- SUPABASE -->
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  function showPage(page) {
-    document.getElementById("userPage").classList.add("hidden");
-    document.getElementById("adminPage").classList.add("hidden");
+  const supabaseUrl = 'https://nshyyzvtmhyeluvewczk.supabase.co';
+  const supabaseKey = 'sb_publishable_d6_k7muWNpm7QgL1xeMdfg_emtXDi1b';
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (page === "user") {
-      document.getElementById("userPage").classList.remove("hidden");
-    } else {
-      document.getElementById("adminPage").classList.remove("hidden");
+  let currentUserProfile = null;
+
+  // ---------- AUTH ----------
+  async function signUp() {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const username = usernameInput.value;
+
+    const { data, error } = await supabase.auth.signUp({
+      email, password
+    });
+
+    if (error) {
+      authMsg.textContent = error.message;
+      return;
+    }
+
+    await supabase.from("Users").insert({
+      id: data.user.id,
+      username,
+      age: 11,
+      level: 1,
+      district: 1,
+      role: "user"
+    });
+
+    authMsg.textContent = "Account created. Log in.";
+  }
+
+  async function signIn() {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailInput.value,
+      password: passwordInput.value
+    });
+
+    if (error) {
+      authMsg.textContent = error.message;
+      return;
+    }
+
+    loadProfile();
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    location.reload();
+  }
+
+  // ---------- PROFILE ----------
+  async function loadProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("Users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    currentUserProfile = data;
+
+    auth.classList.add("hidden");
+    profile.classList.remove("hidden");
+
+    p_username.textContent = data.username;
+    p_age.textContent = data.age;
+    p_level.textContent = data.level;
+    p_district.textContent = data.district;
+    p_role.textContent = data.role;
+
+    if (data.role === "admin") {
+      admin.classList.remove("hidden");
     }
   }
 
-  function render() {
-    document.getElementById("u_name").textContent = user.username;
-    document.getElementById("u_age").textContent = user.age;
-    document.getElementById("u_level").textContent = user.level;
-    document.getElementById("u_district").textContent = user.district;
+  // ---------- ADMIN ----------
+  async function adminLevelUp() {
+    await supabase
+      .from("Users")
+      .update({ level: currentUserProfile.level + 1 })
+      .eq("id", currentUserProfile.id);
+
+    loadProfile();
   }
 
-  function gainXP() {
-    user.level++;
+  async function adminAgeUp() {
+    await supabase
+      .from("Users")
+      .update({ age: currentUserProfile.age + 1 })
+      .eq("id", currentUserProfile.id);
 
-    if (user.level % 2 === 0) {
-      user.age++;
-    }
-
-    render();
+    loadProfile();
   }
 
-  function enterDistrict() {
-    document.getElementById("hubMessage").textContent =
-      "You are roleplaying in District " + user.district + ".";
-  }
+  // ---------- INIT ----------
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const usernameInput = document.getElementById("username");
+  const authMsg = document.getElementById("authMsg");
 
-  function enterCapitol() {
-    if (user.level >= 3 || user.forceCapitol) {
-      document.getElementById("hubMessage").textContent =
-        "Welcome to the Capitol. Eyes are everywhere.";
-    } else {
-      document.getElementById("hubMessage").textContent =
-        "Capitol locked. Reach Level 3.";
-    }
-  }
+  const auth = document.getElementById("auth");
+  const profile = document.getElementById("profile");
+  const admin = document.getElementById("admin");
 
-  // ADMIN FUNCTIONS
-  function adminLevelUp() {
-    user.level++;
-    render();
-  }
+  const p_username = document.getElementById("p_username");
+  const p_age = document.getElementById("p_age");
+  const p_level = document.getElementById("p_level");
+  const p_district = document.getElementById("p_district");
+  const p_role = document.getElementById("p_role");
 
-  function adminAgeUp() {
-    user.age++;
-    render();
-  }
+  loadProfile();
 
-  function setDistrict(num) {
-    user.district = num;
-    render();
-  }
-
-  function unlockCapitol() {
-    user.forceCapitol = true;
-    alert("Capitol access force-enabled.");
-  }
-
-  render();
+  // expose to buttons
+  window.signUp = signUp;
+  window.signIn = signIn;
+  window.logout = logout;
+  window.adminLevelUp = adminLevelUp;
+  window.adminAgeUp = adminAgeUp;
 </script>
 
 </body>
